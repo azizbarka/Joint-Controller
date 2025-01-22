@@ -67,7 +67,7 @@ public class ActiveJoint : MonoBehaviour
         {
             var currentTargetAngle = controller.input > 0 ? targetAngleRange.y : targetAngleRange.x;
             currentSpring = targetSpring;
-            currentAngle =  Mathf.MoveTowards(currentAngle, currentTargetAngle,
+            currentAngle =  Mathf.MoveTowardsAngle(currentAngle, currentTargetAngle,
                 rotateSpeed * controller.absoluteInput* Time.deltaTime);
             springSpeed = HandleFactor;
         }
@@ -89,8 +89,15 @@ public class ActiveJoint : MonoBehaviour
     private void OnHandlingJointChanged()
     {
         if (isHandled)
+        {
             currentAngle = transform.localEulerAngles.GetSingleAxisValue(joint.axis);
+            Debug.Log(transform.localEulerAngles + "  " + joint.axis + "  " + currentAngle);
+            
+           
+        }
     }
+    
+ 
 
     public void SetController(ActiveJointController controller) => this.controller = controller;
     private void OnCollisionEnter(Collision other) => OnCollisionChanged(true);

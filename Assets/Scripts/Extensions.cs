@@ -7,7 +7,7 @@ public static class Extensions
   //Vectors
   public static float GetSingleAxisValue(this Vector3 vector,Vector3 axis )
   {
-    return vector.x + axis.x + vector.y + axis.y + vector.z + axis.z;
+    return vector.x * axis.x + vector.y * axis.y + vector.z * axis.z;
   }
   
 }
