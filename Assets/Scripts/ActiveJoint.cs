@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using NaughtyAttributes;
 using TMPro.EditorUtilities;
+using Unity.Mathematics;
 using UnityEngine;
 
 [RequireComponent(typeof(ConfigurableJoint))]
@@ -12,16 +13,16 @@ public class ActiveJoint : MonoBehaviour
     
     //Paramaters
     [SerializeField,Required] private ActiveJointController controller;
-    public float targetSpring;
+    public float targetSpring = 2000f;
     public Vector2 targetAngleRange = new Vector2(20,170);
     [Header("Speed/ Duration")]
-    public float rotateSpeed = 1f;
+    public float rotateSpeed = 20;
     [Space(3)]
-    public TransitionTimeUnit handleUnit;
-    [SerializeField] private float handle=1f;
+    public TransitionTimeUnit handleUnit  = TransitionTimeUnit.Speed;
+    [SerializeField] private float handle=1000f;
     [Space(3)]
     public TransitionTimeUnit releaseUnit;
-    [SerializeField ] private float release = 0.2f;
+    [SerializeField ] private float release = 0.05f;
     
     
     //Properties
@@ -45,19 +46,34 @@ public class ActiveJoint : MonoBehaviour
             }
         }
     }
-    [ShowNativeProperty]
-    public bool isCollided { get; protected set; }
-    [ShowNativeProperty]
-    public float currentAngle { get; set; }
-    
+ 
+    [field: SerializeField]
+    public bool isCollided { get; set; }
+
+    private Quaternion initialJointRotation;
+    [field: SerializeField] public float currentAngle{ get; set; }
+    public ConfigurableJoint ActualJoint => joint;
+    public Rigidbody ActualRigidbody => _rigidbody;
     //Private variables
     private ConfigurableJoint joint;
+    private Rigidbody _rigidbody;
+    
+ 
 
     private void Start()
     {
         joint = GetComponent<ConfigurableJoint>();
+        _rigidbody = GetComponent<Rigidbody>();
+
+
     }
 
+    [Button]
+    public void HandleJoint()
+    {
+        isHandled = true;
+    }
+    public void SetIntialRotation() => initialJointRotation = transform.rotation;
     private void Update()
     {
  
@@ -67,8 +83,8 @@ public class ActiveJoint : MonoBehaviour
         {
             var currentTargetAngle = controller.input > 0 ? targetAngleRange.y : targetAngleRange.x;
             currentSpring = targetSpring;
-            currentAngle =  Mathf.MoveTowardsAngle(currentAngle, currentTargetAngle,
-                rotateSpeed * controller.absoluteInput* Time.deltaTime);
+            currentAngle =  Mathf.MoveTowards(currentAngle, currentTargetAngle, rotateSpeed * controller.absoluteInput* Time.deltaTime);
+           // currentAngle += rotateSpeed * controller.input * -1 *Time.deltaTime;
             springSpeed = HandleFactor;
         }
         else
@@ -79,24 +95,37 @@ public class ActiveJoint : MonoBehaviour
             
         angularSpringX.positionSpring = Mathf.MoveTowards(angularSpringX.positionSpring, currentSpring,
             springSpeed * Time.deltaTime);
-              
-        joint.targetRotation = Quaternion.Euler(currentAngle * joint.axis);
+
+        joint.targetRotation = Quaternion.AngleAxis(currentAngle, joint.axis);
         joint.angularXDrive = angularSpringX;
+        
+     if(joint.axis != Vector3.right)
+         Debug.LogWarning("Joint is changed "  + joint.axis);
     }
 
     
     //Methods
     private void OnHandlingJointChanged()
     {
+        return;
         if (isHandled)
         {
-            currentAngle = transform.localEulerAngles.GetSingleAxisValue(joint.axis);
-            Debug.Log(transform.localEulerAngles + "  " + joint.axis + "  " + currentAngle);
-            
-           
+            var isRight = controller.rightJoint == this;
+            currentAngle = Vector3.SignedAngle(transform.forward, Vector3.forward, Vector3.up);
+            if (isRight)
+            {
+                targetAngleRange.x = currentAngle;
+                targetAngleRange.y = currentAngle + 170;
+            }
+            else
+            {
+                targetAngleRange.x = currentAngle - 170;
+                targetAngleRange.y = currentAngle;
+            }
         }
     }
-    
+
+
  
 
     public void SetController(ActiveJointController controller) => this.controller = controller;
